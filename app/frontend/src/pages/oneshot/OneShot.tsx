@@ -3,7 +3,7 @@ import { Checkbox, ChoiceGroup, IChoiceGroupOption, Panel, DefaultButton, Spinne
 
 import styles from "./OneShot.module.css";
 
-import { askApi, Approaches, AskResponse, AskRequest } from "../../api";
+import { askApi, Approaches, AskResponse, AskRequest, Indexes } from "../../api";
 import { Answer, AnswerError } from "../../components/Answer";
 import { QuestionInput } from "../../components/QuestionInput";
 import { ExampleList } from "../../components/Example";
@@ -20,6 +20,7 @@ const OneShot = () => {
     const [useSemanticRanker, setUseSemanticRanker] = useState<boolean>(true);
     const [useSemanticCaptions, setUseSemanticCaptions] = useState<boolean>(false);
     const [excludeCategory, setExcludeCategory] = useState<string>("");
+    const [index, setIndex] = useState<Indexes>(Indexes.All);
 
     const lastQuestionRef = useRef<string>("");
 
@@ -42,6 +43,7 @@ const OneShot = () => {
             const request: AskRequest = {
                 question,
                 approach,
+                index,
                 overrides: {
                     promptTemplate: promptTemplate.length === 0 ? undefined : promptTemplate,
                     promptTemplatePrefix: promptTemplatePrefix.length === 0 ? undefined : promptTemplatePrefix,
@@ -93,6 +95,10 @@ const OneShot = () => {
         setExcludeCategory(newValue || "");
     };
 
+    const onIndexChange = (_ev?: React.FormEvent<HTMLElement | HTMLInputElement>, option?: IChoiceGroupOption) => {
+        setIndex((option?.key as Indexes) || Indexes.All);
+    };
+
     const onExampleClicked = (example: string) => {
         makeApiRequest(example);
     };
@@ -129,21 +135,32 @@ const OneShot = () => {
         }
     ];
 
+    const indexes: IChoiceGroupOption[] = [
+        {
+            key: Indexes.All,
+            text: "様々なトピックについて回答"
+        },
+        {
+            key: Indexes.Comic,
+            text: "ジャンプコミックスについて回答"
+        },
+        {
+            key: Indexes.KakuteiShinkoku,
+            text: "確定申告手続きについて回答"
+        }
+    ];
+
     return (
         <div className={styles.oneshotContainer}>
             <div className={styles.oneshotTopSection}>
                 <SettingsButton className={styles.settingsButton} onClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)} />
                 <h1 className={styles.oneshotTitle}>Ask your data</h1>
                 <div className={styles.oneshotQuestionInput}>
-                    <QuestionInput
-                        placeholder="Example: Does my plan cover annual eye exams?"
-                        disabled={isLoading}
-                        onSend={question => makeApiRequest(question)}
-                    />
+                    <QuestionInput placeholder="質問をしてみましょう。" disabled={isLoading} onSend={question => makeApiRequest(question)} />
                 </div>
             </div>
             <div className={styles.oneshotBottomSection}>
-                {isLoading && <Spinner label="Generating answer" />}
+                {isLoading && <Spinner label="AI 考え中... " />}
                 {!lastQuestionRef.current && <ExampleList onExampleClicked={onExampleClicked} />}
                 {!isLoading && answer && !error && (
                     <div className={styles.oneshotAnswerContainer}>
@@ -173,7 +190,7 @@ const OneShot = () => {
             </div>
 
             <Panel
-                headerText="Configure answer generation"
+                headerText="回答方式を設定する"
                 isOpen={isConfigPanelOpen}
                 isBlocking={false}
                 onDismiss={() => setIsConfigPanelOpen(false)}
@@ -243,6 +260,9 @@ const OneShot = () => {
                     onChange={onUseSemanticCaptionsChange}
                     disabled={!useSemanticRanker}
                 />
+
+                {/* インデックスを選択する */}
+                <ChoiceGroup className={styles.oneshotSettingsSeparator} label="Index" options={indexes} defaultSelectedKey={index} onChange={onIndexChange} />
             </Panel>
         </div>
     );

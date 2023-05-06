@@ -57,7 +57,7 @@ Answer:
         if overrides.get("semantic_ranker"):
             r = self.search_client.search(q, 
                                           filter=filter,
-                                          query_type=QueryType.SEMANTIC, 
+                                          query_type=QueryType.FULL, 
                                           query_language="ja-jp", 
                                           query_speller="none", 
                                           semantic_configuration_name="default", 
@@ -70,6 +70,12 @@ Answer:
         else:
             results = [doc[self.sourcepage_field] + ": " + nonewlines(doc[self.content_field]) for doc in r]
         content = "\n".join(results)
+
+        #debug Cogntive Searchからの回答を確認
+        print('')
+        print('CognitiveSearchの回答')
+        print(content)
+        print('')
 
         prompt = (overrides.get("prompt_template") or self.template).format(q=q, retrieved=content)
         completion = openai.Completion.create(

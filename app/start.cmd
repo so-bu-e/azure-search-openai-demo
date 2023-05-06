@@ -15,6 +15,9 @@ if "%errorlevel%" neq "0" (
     exit /B %errorlevel%
 )
 
+rem debug sobue ディレクトリ移動しないとエラーになるので修正
+cd app
+
 echo.
 echo Restoring backend python packages
 echo.

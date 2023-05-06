@@ -19,6 +19,7 @@ export type AskRequestOverrides = {
 export type AskRequest = {
     question: string;
     approach: Approaches;
+    index: Indexes;
     overrides?: AskRequestOverrides;
 };
 
@@ -39,3 +40,12 @@ export type ChatRequest = {
     approach: Approaches;
     overrides?: AskRequestOverrides;
 };
+
+// CoginitiveSearch Indexes
+export const enum Indexes {
+    All = "gptallindex",
+    KamakuraBusho = "gptkbindex",
+    Comic = "gptcmcindex",
+    KakuteiShinkoku = "gptflwkktsnkkindex",
+    HoltelsDB = "hotels-sql-idx"
+}

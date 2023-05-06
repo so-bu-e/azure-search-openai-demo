@@ -36,7 +36,7 @@ class ReadDecomposeAsk(Approach):
             print("q: ", q)
             r = self.search_client.search(q,
                                           filter=filter,
-                                          query_type=QueryType.SEMANTIC, 
+                                          query_type=QueryType.FULL, 
                                           query_language="ja-jp", 
                                           query_speller="none", 
                                           semantic_configuration_name="default", 

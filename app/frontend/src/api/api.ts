@@ -9,6 +9,7 @@ export async function askApi(options: AskRequest): Promise<AskResponse> {
         body: JSON.stringify({
             question: options.question,
             approach: options.approach,
+            index: options.index,
             overrides: {
                 semantic_ranker: options.overrides?.semanticRanker,
                 semantic_captions: options.overrides?.semanticCaptions,

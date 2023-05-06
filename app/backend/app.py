@@ -16,30 +16,47 @@ from azure.storage.blob import BlobServiceClient
 AZURE_BLOB_STORAGE_ACCOUNT = os.environ.get("AZURE_BLOB_STORAGE_ACCOUNT") or "mystorageaccount"
 AZURE_BLOB_STORAGE_CONTAINER = os.environ.get("AZURE_BLOB_STORAGE_CONTAINER") or "content"
 AZURE_SEARCH_SERVICE = os.environ.get("AZURE_SEARCH_SERVICE") or "gptkb"
-AZURE_SEARCH_INDEX = os.environ.get("AZURE_SEARCH_INDEX") or "bushoindex"
+AZURE_SEARCH_INDEX = os.environ.get("AZURE_SEARCH_INDEX") or "gptallindex"
 AZURE_OPENAI_SERVICE = os.environ.get("AZURE_OPENAI_SERVICE") or "myopenai"
-AZURE_OPENAI_GPT_DEPLOYMENT = os.environ.get("AZURE_OPENAI_GPT_DEPLOYMENT") or "davinci"
-AZURE_OPENAI_CHATGPT_DEPLOYMENT = os.environ.get("AZURE_OPENAI_CHATGPT_DEPLOYMENT") or "chat"
+AZURE_OPENAI_GPT_DEPLOYMENT = os.environ.get("AZURE_OPENAI_GPT_DEPLOYMENT") or "text-davinci-003"
+AZURE_OPENAI_CHATGPT_DEPLOYMENT = os.environ.get("AZURE_OPENAI_CHATGPT_DEPLOYMENT") or "gpt-3.5-turbo"
+OPENAI_APIKEY = os.environ.get("OPENAI_APIKEY") or ""
+SWITCH_OPENAI = os.environ.get("SWITCH_OPENAI") or "OPENAI"
 
 KB_FIELDS_CONTENT = os.environ.get("KB_FIELDS_CONTENT") or "content"
 KB_FIELDS_CATEGORY = os.environ.get("KB_FIELDS_CATEGORY") or "category"
 KB_FIELDS_SOURCEPAGE = os.environ.get("KB_FIELDS_SOURCEPAGE") or "sourcepage"
 
-# Use the current user identity to authenticate with Azure OpenAI, Cognitive Search and Blob Storage (no secrets needed, 
-# just use 'az login' locally, and managed identity when deployed on Azure). If you need to use keys, use separate AzureKeyCredential instances with the 
-# keys for each service
-# If you encounter a blocking error during a DefaultAzureCredntial resolution, you can exclude the problematic credential by using a parameter (ex. exclude_shared_token_cache_credential=True)
-#azure_credential = DefaultAzureCredential()
-azure_credential = DefaultAzureCredential(exclude_shared_token_cache_credential=True)
-# Used by the OpenAI SDK
-openai.api_type = "azure"
-openai.api_base = f"https://{AZURE_OPENAI_SERVICE}.openai.azure.com"
-openai.api_version = "2022-12-01"
+#debug sobue4
+#資格情報を設定
+azure_credential = DefaultAzureCredential()
 
-# Comment these two lines out if using keys, set your API key in the OPENAI_API_KEY environment variable instead
-openai.api_type = "azure_ad"
-openai_token = azure_credential.get_token("https://cognitiveservices.azure.com/.default")
-openai.api_key = openai_token.token
+openai.api_key = OPENAI_APIKEY
+
+#利用するAIのエンドポイントを本家Open AIとAzure Open AIのどっちを使うか制御する
+if SWITCH_OPENAI == "OPENAI":
+    #Open AIを使用する場合に必要な項目
+    # openai.api_key = OPENAI_APIKEY
+    None
+else: 
+    #Azure Opne AIを使用する場合の設定項目
+    #Open AIを使用する場合は不要な項目
+    # Use the current user identity to authenticate with Azure OpenAI, Cognitive Search and Blob Storage (no secrets needed, 
+    # just use 'az login' locally, and managed identity when deployed on Azure). If you need to use keys, use separate AzureKeyCredential instances with the 
+    # keys for each service
+    # If you encounter a blocking error during a DefaultAzureCredntial resolution, you can exclude the problematic credential by using a parameter (ex. exclude_shared_token_cache_credential=True)
+    
+    #azure_credential = DefaultAzureCredential(exclude_shared_token_cache_credential=True)
+    # Used by the OpenAI SDK
+    openai.api_type = "azure"
+    openai.api_base = f"https://{AZURE_OPENAI_SERVICE}.openai.azure.com"
+    openai.api_version = "2022-12-01"
+
+    #Azure Opne AIを使用する場合の設定項目
+    # Comment these two lines out if using keys, set your API key in the OPENAI_API_KEY environment variable instead
+    openai.api_type = "azure_ad"
+    openai_token = azure_credential.get_token("https://cognitiveservices.azure.com/.default")
+    openai.api_key = openai_token.token
 
 # Set up clients for Cognitive Search and Storage
 search_client = SearchClient(
@@ -63,6 +80,22 @@ chat_approaches = {
     "rrr": ChatReadRetrieveReadApproach(search_client, AZURE_OPENAI_CHATGPT_DEPLOYMENT, AZURE_OPENAI_GPT_DEPLOYMENT, KB_FIELDS_SOURCEPAGE, KB_FIELDS_CONTENT)
 }
 
+def set_search_client(index_name):
+    search_client = SearchClient(
+    endpoint=f"https://{AZURE_SEARCH_SERVICE}.search.windows.net",
+    index_name=index_name,
+    credential=azure_credential)
+
+    return search_client
+
+def set_approach(search_client, approach):
+    ask_approaches = {
+        "rtr": RetrieveThenReadApproach(search_client, AZURE_OPENAI_GPT_DEPLOYMENT, KB_FIELDS_SOURCEPAGE, KB_FIELDS_CONTENT),
+        "rrr": ReadRetrieveReadApproach(search_client, AZURE_OPENAI_GPT_DEPLOYMENT, KB_FIELDS_SOURCEPAGE, KB_FIELDS_CONTENT),
+        "rda": ReadDecomposeAsk(search_client, AZURE_OPENAI_GPT_DEPLOYMENT, KB_FIELDS_SOURCEPAGE, KB_FIELDS_CONTENT)
+    }
+    return ask_approaches.get(approach)
+ 
 app = Flask(__name__)
 
 @app.route("/", defaults={"path": "index.html"})
@@ -83,10 +116,22 @@ def content_file(path):
     
 @app.route("/ask", methods=["POST"])
 def ask():
-    ensure_openai_token()
+    # debug sobue Azure Open AIのトークン取得処理をコメントアウト
+    # ensure_openai_token()
     approach = request.json["approach"]
+    index = request.json["index"]
+    print("")
+    print("index")
+    print(index)
+    print("")
     try:
-        impl = ask_approaches.get(approach)
+        search_client = set_search_client(index)
+
+        print(search_client)
+
+        approach = set_approach(search_client, approach)
+
+        impl = approach
         if not impl:
             return jsonify({"error": "unknown approach"}), 400
         r = impl.run(request.json["question"], request.json.get("overrides") or {})
@@ -97,7 +142,8 @@ def ask():
     
 @app.route("/chat", methods=["POST"])
 def chat():
-    ensure_openai_token()
+    # debug sobue Azure Open AIのトークン取得処理をコメントアウト
+    # ensure_openai_token()
     approach = request.json["approach"]
     try:
         impl = chat_approaches.get(approach)
@@ -116,4 +162,5 @@ def ensure_openai_token():
         openai.api_key = openai_token.token
     
 if __name__ == "__main__":
-    app.run()
+    # app.run()
+    app.run(debug=True)

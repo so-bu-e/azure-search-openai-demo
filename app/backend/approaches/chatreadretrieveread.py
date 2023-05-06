@@ -70,7 +70,7 @@ Search query:
         if overrides.get("semantic_ranker"):
             r = self.search_client.search(q, 
                                           filter=filter,
-                                          query_type=QueryType.SEMANTIC, 
+                                          query_type=QueryType.FULL, 
                                           query_language="ja-jp", 
                                           query_speller="none", 
                                           semantic_configuration_name="default", 
@@ -96,8 +96,10 @@ Search query:
             prompt = prompt_override.format(sources=content, chat_history=self.get_chat_history_as_text(history), follow_up_questions_prompt=follow_up_questions_prompt)
         print(len(prompt),prompt)
         # STEP 3: Generate a contextual and content specific answer using the search results and chat history
+        #debug sobue
+        # completion = openai.ChatCompletion.create(
         completion = openai.Completion.create(
-            engine=self.chatgpt_deployment, 
+            engine=self.gpt_deployment, 
             prompt=prompt, 
             temperature=overrides.get("temperature") or 0.0, 
             max_tokens=2048, 
