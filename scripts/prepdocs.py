@@ -15,6 +15,7 @@ from azure.search.documents import SearchClient
 
 import tiktoken
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.document_loaders import PyPDFLoader
 
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
@@ -125,6 +126,19 @@ def splitChunkFile(filepath):
    
     return list1
 
+def splitChunkPDFFile(filepath):
+    data = pdfToText(filepath)
+    chunk = text_splitter.split_text(data)
+
+    list1=[]
+    #chunk単位でループ
+    for i, chunkedtext in enumerate(chunk):
+        dirname = os.path.dirname(filepath)
+        basename = os.path.splitext(os.path.basename(filepath))[0]
+        list1.append([basename + "-" + str(i) , chunkedtext])
+   
+    return list1
+
 def index_sections(filename, sections):
     if args.verbose: print(f"Indexing sections from '{filename}' into search index '{args.index}'")
     search_client = SearchClient(endpoint=f"https://{args.searchservice}.search.windows.net/",
@@ -161,6 +175,14 @@ def remove_from_index(filename):
         # It can take a few seconds for search results to reflect changes, so wait a bit
         time.sleep(2)
 
+#PDFからテキストを抽出する
+def pdfToText(path):
+    loader = PyPDFLoader(path)
+    pages = loader.load_and_split()
+
+    contents = [ p.page_content for p in pages ]
+    return ''.join(contents)
+
 if args.removeall:
     remove_blobs(None)
     remove_from_index(None)
@@ -187,7 +209,13 @@ else:
             remove_blobs(None)
             remove_from_index(None)
         else:
-            pages = splitChunkFile(filename)
+
+            root, ext = os.path.splitext(filename)
+            if ext == ".pdf":
+                pages = splitChunkPDFFile(filename)
+            else:
+                pages = splitChunkFile(filename)
+            
             if not args.skipblobs:
                 upload_blobs(pages)
             sections = create_sections(pages)
