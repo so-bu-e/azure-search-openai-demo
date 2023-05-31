@@ -9,25 +9,20 @@ param environmentName string
 @description('Primary location for all resources')
 param location string
 
-// param cognitiveServicesAccountName string = ''
-// param cognitiveServicesSkuName string = 'S0'
-param appServicePlanName string = ''
-param resourceGroupName string = ''
-param backendServiceName string = ''
-param searchServicesName string = ''
+param cognitiveServicesAccountName string = 'linchatgptai002'
+param cognitiveServicesSkuName string = 'S0'
+param appServicePlanName string = 'linchatgptplan002'
+param resourceGroupName string = 'Lincrea-ChatGPT'
+param backendServiceName string = 'linchatgptapp002'
+param searchServicesName string = 'linchatgptsrch001'
 param searchServicesSkuName string = 'standard'
-param storageAccountName string = ''
+param storageAccountName string = 'linchatgptstrg001'
 param containerName string = 'content'
 param searchIndexName string = 'gptkbindex'
-//Open AIのモデル名に変更する
-param gptDeploymentName string = 'text-davinci-003'
-// param gptModelName string = 'text-davinci-003'
-//Open AIのモデル名に変更する
-param chatGptDeploymentName string = 'gpt-35-turbo'
-// param chatGptModelName string = 'gpt-35-turbo'
-//TODO APIキーべた書き　外から渡す方法を調べる
-param openAIApiKey string = ''
-param switchOpenAi string = 'OPENAI'
+param gptDeploymentName string = 'davinci'
+param gptModelName string = 'text-davinci-003'
+param chatGptDeploymentName string = 'chat'
+param chatGptModelName string = 'gpt-35-turbo'
 
 @description('Id of the user or app to assign application roles')
 param principalId string = ''
@@ -75,53 +70,51 @@ module backend 'core/host/appservice.bicep' = {
     appSettings: {
       AZURE_BLOB_STORAGE_ACCOUNT: storage.outputs.name
       AZURE_BLOB_STORAGE_CONTAINER: containerName
-      // AZURE_OPENAI_SERVICE: cognitiveServices.outputs.name
+      AZURE_OPENAI_SERVICE: cognitiveServices.outputs.name
       AZURE_SEARCH_INDEX: searchIndexName
       AZURE_SEARCH_SERVICE: searchServices.outputs.name
       AZURE_OPENAI_GPT_DEPLOYMENT: gptDeploymentName
       AZURE_OPENAI_CHATGPT_DEPLOYMENT: chatGptDeploymentName
-      OPENAI_APIKEY: openAIApiKey
-      SWITCH_OPENAI: switchOpenAi
     }
   }
 }
 
-// module cognitiveServices 'core/ai/cognitiveservices.bicep' = {
-//   scope: rg
-//   name: 'openai'
-//   params: {
-//     name: !empty(cognitiveServicesAccountName) ? cognitiveServicesAccountName : '${abbrs.cognitiveServicesAccounts}${resourceToken}'
-//     location: location
-//     tags: tags
-//     sku: {
-//       name: cognitiveServicesSkuName
-//     }
-//     deployments: [
-//       {
-//         name: gptDeploymentName
-//         model: {
-//           format: 'OpenAI'
-//           name: gptModelName
-//           version: '1'
-//         }
-//         scaleSettings: {
-//           scaleType: 'Standard'
-//         }
-//       }
-//       {
-//         name: chatGptDeploymentName
-//         model: {
-//           format: 'OpenAI'
-//           name: chatGptModelName
-//           version: '0301'
-//         }
-//         scaleSettings: {
-//           scaleType: 'Standard'
-//         }
-//       }
-//     ]
-//   }
-// }
+module cognitiveServices 'core/ai/cognitiveservices.bicep' = {
+  scope: rg
+  name: 'openai'
+  params: {
+    name: !empty(cognitiveServicesAccountName) ? cognitiveServicesAccountName : '${abbrs.cognitiveServicesAccounts}${resourceToken}'
+    location: location
+    tags: tags
+    sku: {
+      name: cognitiveServicesSkuName
+    }
+    deployments: [
+      {
+        name: gptDeploymentName
+        model: {
+          format: 'OpenAI'
+          name: gptModelName
+          version: '1'
+        }
+        scaleSettings: {
+          scaleType: 'Standard'
+        }
+      }
+      {
+        name: chatGptDeploymentName
+        model: {
+          format: 'OpenAI'
+          name: chatGptModelName
+          version: '0301'
+        }
+        scaleSettings: {
+          scaleType: 'Standard'
+        }
+      }
+    ]
+  }
+}
 
 module searchServices 'core/search/search-services.bicep' = {
   scope: rg
@@ -167,15 +160,15 @@ module storage 'core/storage/storage-account.bicep' = {
 }
 
 // USER ROLES
-// module openAiRoleUser 'core/security/role.bicep' = {
-//   scope: rg
-//   name: 'openai-role-user'
-//   params: {
-//     principalId: principalId
-//     roleDefinitionId: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
-//     principalType: 'User'
-//   }
-// }
+module openAiRoleUser 'core/security/role.bicep' = {
+  scope: rg
+  name: 'openai-role-user'
+  params: {
+    principalId: principalId
+    roleDefinitionId: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
+    principalType: 'User'
+  }
+}
 
 module storageRoleUser 'core/security/role.bicep' = {
   scope: rg
@@ -218,15 +211,15 @@ module searchContribRoleUser 'core/security/role.bicep' = {
 }
 
 // SYSTEM IDENTITIES
-// module openAiRoleBackend 'core/security/role.bicep' = {
-//   scope: rg
-//   name: 'openai-role-backend'
-//   params: {
-//     principalId: backend.outputs.identityPrincipalId
-//     roleDefinitionId: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
-//     principalType: 'ServicePrincipal'
-//   }
-// }
+module openAiRoleBackend 'core/security/role.bicep' = {
+  scope: rg
+  name: 'openai-role-backend'
+  params: {
+    principalId: backend.outputs.identityPrincipalId
+    roleDefinitionId: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
+    principalType: 'ServicePrincipal'
+  }
+}
 
 module storageRoleBackend 'core/security/role.bicep' = {
   scope: rg
@@ -249,7 +242,7 @@ module searchRoleBackend 'core/security/role.bicep' = {
 }
 
 output AZURE_LOCATION string = location
-// output AZURE_OPENAI_SERVICE string = cognitiveServices.outputs.name
+output AZURE_OPENAI_SERVICE string = cognitiveServices.outputs.name
 output AZURE_SEARCH_INDEX string = searchIndexName
 output AZURE_SEARCH_SERVICE string = searchServices.outputs.name
 output AZURE_STORAGE_ACCOUNT string = storage.outputs.name

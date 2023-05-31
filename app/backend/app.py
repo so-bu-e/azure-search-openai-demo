@@ -18,8 +18,8 @@ AZURE_BLOB_STORAGE_CONTAINER = os.environ.get("AZURE_BLOB_STORAGE_CONTAINER") or
 AZURE_SEARCH_SERVICE = os.environ.get("AZURE_SEARCH_SERVICE") or "gptkb"
 AZURE_SEARCH_INDEX = os.environ.get("AZURE_SEARCH_INDEX") or "gptallindex"
 AZURE_OPENAI_SERVICE = os.environ.get("AZURE_OPENAI_SERVICE") or "myopenai"
-AZURE_OPENAI_GPT_DEPLOYMENT = os.environ.get("AZURE_OPENAI_GPT_DEPLOYMENT") or "text-davinci-003"
-AZURE_OPENAI_CHATGPT_DEPLOYMENT = os.environ.get("AZURE_OPENAI_CHATGPT_DEPLOYMENT") or "gpt-3.5-turbo"
+AZURE_OPENAI_GPT_DEPLOYMENT = os.environ.get("AZURE_OPENAI_GPT_DEPLOYMENT") or "davinci"
+AZURE_OPENAI_CHATGPT_DEPLOYMENT = os.environ.get("AZURE_OPENAI_CHATGPT_DEPLOYMENT") or "chat"
 OPENAI_APIKEY = os.environ.get("OPENAI_APIKEY") or ""
 SWITCH_OPENAI = os.environ.get("SWITCH_OPENAI") or "OPENAI"
 
@@ -33,6 +33,7 @@ azure_credential = DefaultAzureCredential()
 
 openai.api_key = OPENAI_APIKEY
 
+print(SWITCH_OPENAI)
 #利用するAIのエンドポイントを本家Open AIとAzure Open AIのどっちを使うか制御する
 if SWITCH_OPENAI == "OPENAI":
     #Open AIを使用する場合に必要な項目
@@ -46,7 +47,7 @@ else:
     # keys for each service
     # If you encounter a blocking error during a DefaultAzureCredntial resolution, you can exclude the problematic credential by using a parameter (ex. exclude_shared_token_cache_credential=True)
     
-    #azure_credential = DefaultAzureCredential(exclude_shared_token_cache_credential=True)
+    azure_credential = DefaultAzureCredential(exclude_shared_token_cache_credential=True)
     # Used by the OpenAI SDK
     openai.api_type = "azure"
     openai.api_base = f"https://{AZURE_OPENAI_SERVICE}.openai.azure.com"
@@ -117,7 +118,7 @@ def content_file(path):
 @app.route("/ask", methods=["POST"])
 def ask():
     # debug sobue Azure Open AIのトークン取得処理をコメントアウト
-    # ensure_openai_token()
+    ensure_openai_token()
     approach = request.json["approach"]
     index = request.json["index"]
     print("")
@@ -143,7 +144,7 @@ def ask():
 @app.route("/chat", methods=["POST"])
 def chat():
     # debug sobue Azure Open AIのトークン取得処理をコメントアウト
-    # ensure_openai_token()
+    ensure_openai_token()
     approach = request.json["approach"]
     try:
         impl = chat_approaches.get(approach)

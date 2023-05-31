@@ -99,7 +99,7 @@ Search query:
         #debug sobue
         # completion = openai.ChatCompletion.create(
         completion = openai.Completion.create(
-            engine=self.gpt_deployment, 
+            engine=self.chatgpt_deployment, 
             prompt=prompt, 
             temperature=overrides.get("temperature") or 0.0, 
             max_tokens=2048, 
