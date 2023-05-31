@@ -19,6 +19,9 @@
     },
     "searchServicesSkuName": {
       "value": "standard"
+    },
+    "resourceGroup": {
+      "value": "${AZURE_RESOURCE_GROUP}"
     }
   }
 }
